@@ -1,6 +1,6 @@
 /*
 @Author: Lzww
-@LastEditTime: 2025-8-25 21:58:48
+@LastEditTime: 2025-8-29 21:37:22
 @Description: Safe UDP
 @Language: Go 1.23.4
 */
@@ -12,6 +12,10 @@ import (
 
 	"github.com/xtaci/smux"
 )
+
+func timediff(a, b uint32) int32 {
+	return int32(int64(a) - int64(b))
+}
 
 type Config struct {
 	// Pre-shared key for encryption (32 bytes for AES-256)
