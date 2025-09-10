@@ -13,12 +13,11 @@ import (
 	"github.com/xtaci/smux"
 )
 
-type Listener struct {
+type StreamListener struct {
 	listener net.Listener
-	config   *Config
 }
 
-func (l *Listener) Accept() (net.Conn, error) {
+func (l *StreamListener) Accept() (net.Conn, error) {
 	conn, err := l.listener.Accept()
 	if err != nil {
 		return nil, err
@@ -40,10 +39,10 @@ func (l *Listener) Accept() (net.Conn, error) {
 	}, nil
 }
 
-func (l *Listener) Close() error {
+func (l *StreamListener) Close() error {
 	return l.listener.Close()
 }
 
-func (l *Listener) Addr() net.Addr {
+func (l *StreamListener) Addr() net.Addr {
 	return l.listener.Addr()
 }

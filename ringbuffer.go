@@ -16,6 +16,19 @@ type RingBuffer[T any] struct {
 	tail   int // index where the next element will be inserted
 }
 
+const RINGBUFFER_MIN = 16
+
+func NewRingBuffer[T any](size int) *RingBuffer[T] {
+	if size <= RINGBUFFER_MIN {
+		size = RINGBUFFER_MIN // Ensure a minimum size
+	}
+	return &RingBuffer[T]{
+		head:   0,
+		tail:   0,
+		buffer: make([]T, size),
+	}
+}
+
 // Empty returns true if the ring buffer contains no elements
 func (rb *RingBuffer[T]) Empty() bool {
 	return rb.head == rb.tail

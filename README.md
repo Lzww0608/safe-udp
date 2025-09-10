@@ -1,68 +1,101 @@
 # Safe-UDP
 
-A lightweight, high-performance secure UDP component that provides reliable, encrypted communication over UDP with built-in Forward Error Correction (FEC) capabilities.
+An experimental UDP communication library that implements KCP protocol with optional encryption and Forward Error Correction (FEC) capabilities.
 
-## Overview
+## Project Status
 
-Safe-UDP is a Go library that combines the reliability of KCP protocol with strong encryption and error correction, providing a secure and efficient alternative to TCP for applications that require low-latency, reliable communication. It offers familiar `net.Conn` and `net.Listener` interfaces for easy integration into existing Go applications.
+This is a research/experimental project. The following components have been implemented and tested:
 
-## Features
+### ✅ Completed Components
 
-- **Reliable UDP**: Built on KCP protocol for reliable data transmission over UDP
-- **Strong Encryption**: AES-GCM encryption with PSK-based key derivation (HKDF)
-- **Forward Error Correction**: Built-in FEC for enhanced packet loss recovery
-- **Connection Multiplexing**: Multiple streams over a single UDP connection via smux
-- **Standard Interfaces**: Compatible with `net.Conn` and `net.Listener` interfaces
-- **High Performance**: Optimized buffer management with sync.Pool
-- **Lightweight**: Minimal overhead with pure Go implementation
+- **KCP Protocol Implementation**: Custom implementation of KCP reliable UDP protocol
+- **FEC (Forward Error Correction)**: Reed-Solomon based error correction with auto-tuning
+- **Multiple Encryption Support**: Various cipher implementations (AES, Salsa20, SM4, etc.)
+- **Session Management**: UDP session handling with proper connection lifecycle
+- **Buffer Management**: Ring buffer implementation for efficient data handling
+- **Statistics Collection**: SNMP-style statistics for protocol monitoring
+- **Timer System**: Multi-goroutine timer management system
+- **Batch Operations**: Optimized batch UDP read/write operations
+
+### 🔧 Recently Fixed Issues
+
+- Fixed naming inconsistencies across modules
+- Resolved type conflicts between different Listener implementations
+- Added missing transmission methods (tx, batchTx, defaultTx)
+- Implemented missing readLoop and monitor methods
+- Fixed SNMP field name mismatches
+- Corrected timer system references
+
+### ⚠️ Known Limitations
+
+- Some encryption algorithms marked as deprecated by Go crypto standards
+- Unused legacy interfaces retained for potential future use
+- No high-level public API implemented yet
+- Limited documentation and examples
 
 ## Architecture
 
-### Core Components
-
+### File Structure
 ```
-safeudp/
-├── safeudp.go          # Public API (Dial, Listen, Config)
-├── listener.go         # Listener implementation with session management
-├── conn.go             # Connection wrapper for smux.Stream
-├── secure_conn.go      # Internal secure connection with KCP + crypto + FEC
-├── buffer.go           # Optimized buffer management (sync.Pool)
-├── crypto/
-│   ├── crypto.go       # BlockCrypt interface and HKDF key derivation
-│   └── aesgcm.go       # AES-GCM implementation
-└── kcp/
-    └── ikcp.go         # Pure Go KCP implementation
+safe-udp/
+├── safeudp.go          # Core KCP protocol and utilities
+├── session.go          # UDP session management and I/O operations
+├── fec.go              # Forward Error Correction implementation  
+├── tx.go               # Packet transmission methods
+├── crypt.go            # Multiple encryption algorithm support
+├── snmp.go             # Statistics collection and monitoring
+├── timers.go           # Timer management system
+├── ringbuffer.go       # Efficient ring buffer implementation
+├── batchconn.go        # Batch UDP operations interface
+├── entropy.go          # Nonce generation for encryption
+├── autotune.go         # FEC parameter auto-tuning
+├── listener.go         # High-level stream listener wrapper
+├── conn.go             # Connection wrapper interface
+└── crypto/crypto.go    # Encryption interface definition
 ```
 
-### Data Flow
+### Core Features
 
-1. **Client**: `Dial()` → `secureConn` → KCP + Encryption → UDP
-2. **Server**: UDP → Decryption + KCP → `secureConn` → `Listener.Accept()`
-3. **Multiplexing**: Multiple `Conn` instances over single `secureConn` via smux
+1. **KCP Reliable UDP**
+   - Implemented ARQ (Automatic Repeat reQuest)
+   - Congestion control with customizable parameters
+   - Fast retransmission and early retransmission
+   - Window-based flow control
 
-## Installation
+2. **Forward Error Correction**
+   - Reed-Solomon error correction codes
+   - Auto-tuning mechanism for optimal performance
+   - Configurable data/parity shard ratios
+   - Packet recovery without retransmission
 
-```bash
-go get github.com/yourusername/safe-udp
-```
+3. **Encryption Support**
+   - Multiple cipher implementations available
+   - Block cipher modes with proper padding
+   - Nonce generation for secure encryption
+   - Configurable encryption algorithms
+
+4. **Performance Features**
+   - Memory pool management to reduce GC pressure
+   - Batch packet operations for improved throughput
+   - Ring buffer for efficient data handling
+   - Multi-threaded timer system
 
 ## Configuration
 
-### Config Structure
+The `Config` struct in `safeudp.go` supports the following parameters:
 
 ```go
 type Config struct {
-    // Pre-shared key for encryption (32 bytes for AES-256)
-    Key []byte
+    Key []byte    // Encryption key (32 bytes recommended)
     
     // FEC settings
     FECData   int // Number of data packets in FEC group
     FECParity int // Number of parity packets in FEC group
     
-    // KCP settings
-    NoDelay    int // Enable nodelay mode
-    Interval   int // Internal update timer interval in millisec
-    Resend     int // Fast resend mode
+    // KCP settings  
+    NoDelay      int // Enable nodelay mode
+    Interval     int // Internal update timer interval (ms)
+    Resend       int // Fast resend mode
     NoCongestion int // Disable congestion control
     
     // Buffer settings
@@ -71,56 +104,33 @@ type Config struct {
 }
 ```
 
-### Default Configuration
+## Testing
 
-```go
-func DefaultConfig() *Config {
-    return &Config{
-        FECData:   10,
-        FECParity: 3,
-        NoDelay:   1,
-        Interval:  10,
-        Resend:    2,
-        NoCongestion: 1,
-        SendBuffer: 4194304, // 4MB
-        RecvBuffer: 4194304, // 4MB
-    }
-}
+The project includes comprehensive unit tests:
+
+```bash
+go test -v
 ```
 
-## API Reference
+Test coverage includes:
+- Ring buffer operations
+- Transmission method functionality  
+- Session readLoop and monitor operations
+- Naming consistency verification
+- Error handling scenarios
 
-### Core Functions
+## Dependencies
 
-- `func Dial(network, address string, config *Config) (net.Conn, error)`
-- `func Listen(network, address string, config *Config) (net.Listener, error)`
+- `github.com/klauspost/reedsolomon` - Reed-Solomon FEC implementation
+- `github.com/pkg/errors` - Enhanced error handling
+- `github.com/xtaci/smux` - Stream multiplexing (used by high-level wrapper)
+- `golang.org/x/crypto` - Additional cryptographic functions
+- `golang.org/x/net` - Network utilities for batch operations
 
-### Interfaces
+## Development Status
 
-The library implements standard Go network interfaces:
-
-- `net.Conn` - for client/server connections
-- `net.Listener` - for server listeners
-
-## Performance Considerations
-
-1. **Buffer Management**: Uses `sync.Pool` for efficient memory allocation
-2. **FEC Tuning**: Adjust FECData/FECParity based on network conditions
-3. **KCP Parameters**: Fine-tune NoDelay, Interval, Resend for your use case
-4. **Concurrent Connections**: Each connection runs in its own goroutine
-
-## Security
-
-- **Encryption**: AES-GCM provides both confidentiality and authenticity
-- **Key Derivation**: HKDF ensures proper key material derivation from PSK
-- **Perfect Forward Secrecy**: Consider implementing session key exchange for PFS
+This project is in active development. The core protocol implementation is functional and tested, but lacks a stable public API. Use at your own risk in production environments.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [KCP](https://github.com/skywind3000/kcp) - Reliable UDP protocol implementation
-- [smux](https://github.com/xtaci/smux) - Stream multiplexing library
-- Go crypto packages for encryption implementations
+MIT License - see [LICENSE](LICENSE) file for details.

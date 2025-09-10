@@ -84,7 +84,6 @@ func newShardHeap() *shardHeap {
 }
 
 type fecDecoder struct {
-	rxlimit      int
 	dataShards   int
 	parityShards int
 	shardSize    int
@@ -101,7 +100,7 @@ type fecDecoder struct {
 	shouldTune bool
 }
 
-func newFecDecoder(dataShards, parityShards int) *fecDecoder {
+func newFECDecoder(dataShards, parityShards int) *fecDecoder {
 	if dataShards <= 0 || parityShards <= 0 {
 		return nil
 	}
